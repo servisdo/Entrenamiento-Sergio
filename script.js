@@ -211,6 +211,10 @@ function init() {
       if (t.dataset.tab === "graficos") drawCharts();
       if (t.dataset.tab === "historial") renderHistory();
     };
+    setTimeout(() => {
+  console.log("⚙️ Forzando render tarde");
+  render();
+}, 100);
   });
 
   // Navegación de semanas
