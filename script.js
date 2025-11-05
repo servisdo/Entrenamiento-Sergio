@@ -1,3 +1,7 @@
+// 🔧 Desregistrar SW temporalmente para evitar caché
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations && navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
+}
 // ================================
 //  BLOQUE 1 - ESTRUCTURA BASE
 // ================================
@@ -199,6 +203,8 @@ function init() {
       if (t.dataset.tab === "graficos") drawCharts();
       if (t.dataset.tab === "historial") renderHistory();
     };
+    const st = loadStateFor(getActiveWeek());
+alert("✅ Semana activa: " + getActiveWeek() + " | días: " + (st?.days?.length || 0));
   });
 
   // Navegación de semanas
@@ -284,7 +290,7 @@ function render() {
 
   const root = planner;
   root.innerHTML = "";
-
+planner.insertAdjacentHTML('beforeend','<div class="card" style="padding:12px">DEBUG: render() vivo</div>');
   st.days.forEach((day, idx) => {
     const sec = document.createElement("section");
     sec.className = "day card";
