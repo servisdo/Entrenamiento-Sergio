@@ -215,6 +215,8 @@ function init() {
   console.log("⚙️ Forzando render tarde");
   render();
 }, 100);
+    // iOS/Safari a veces retrasa el pintado: forzamos render tras 100ms
+setTimeout(render, 100);
   });
 
   // Navegación de semanas
@@ -312,10 +314,18 @@ function render() {
     return;
   }
 
-  // Asegurar forma correcta
-  ensureWeekShape(wk);
+  // Asegurar estructura correcta; si está rota, regenerar y continuar
+  const repaired = ensureWeekShape(wk);
 
-  const st = loadStateFor(wk);
+  // Cargar estado (ya reparado si hiciera falta)
+  let st = loadStateFor(wk);
+
+  // Fallback duro: si por lo que sea sigue sin days, forzar plantilla
+  if (!st || !Array.isArray(st.days) || st.days.length !== 7) {
+    st = defaultPlan(wk);
+    saveStateFor(wk, st);
+  }
+
   const root = planner;
   if (!root) return;
   root.innerHTML = "";
@@ -347,7 +357,6 @@ function render() {
 
   attachBlockHandlers();
 }
-
 // ===== Stubs y utilidades =====
 function duplicateWeek() {
   const cur = getActiveWeek();
