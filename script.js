@@ -1,4 +1,4 @@
-console.log("✅ script.js cargado correctamente");
+alert("✅ El script de Sergio está funcionando correctamente");
 // ================================
 //  BLOQUE 1 - ESTRUCTURA BASE
 // ================================
