@@ -262,7 +262,19 @@ function createWeekIfMissing(weekStart, setActive) {
 // Render principal
 function render() {
   const wk = getActiveWeek();
-  const st = loadStateFor(wk);
+  let st = wk ? loadStateFor(wk) : null;
+
+  // Si no hay semana activa o está vacía, crea la de este lunes y reintenta
+  if (!wk || !st) {
+    const today = new Date();
+    const monday = new Date(today);
+    const gd = today.getDay();
+    monday.setDate(monday.getDate() + (gd === 0 ? -6 : 1 - gd));
+    const newWk = monday.toISOString().slice(0, 10);
+    createWeekIfMissing(newWk, true);
+    return; // dejamos que el siguiente render (llamado por createWeekIfMissing) pinte todo
+  }
+
   const root = planner;
   root.innerHTML = "";
 
@@ -294,6 +306,7 @@ function render() {
   attachBlockHandlers();
 }
 
+  
 // Render de cada día
 function renderDayBlocks(container, day, idx) {
   container.innerHTML = "";
