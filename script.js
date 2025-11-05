@@ -1,7 +1,3 @@
-// 🔧 Desregistrar SW temporalmente para evitar caché
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations && navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
-}
 // ================================
 //  BLOQUE 1 - ESTRUCTURA BASE
 // ================================
@@ -183,10 +179,22 @@ function defaultPlan(weekStart) {
 }
 
 // ================================
+//   REPARACIÓN DE ESTRUCTURA
+// ================================
+function ensureWeekShape(weekStart) {
+  const all = loadAll();
+  const st = all[weekStart];
+  if (!st || !Array.isArray(st.days) || st.days.length !== 7) {
+    all[weekStart] = defaultPlan(weekStart);
+    saveAll(all);
+    return true; // reparado
+  }
+  return false; // ok
+}
+
+// ================================
 //   BLOQUE 2 - INTERACCIÓN Y RENDERIZADO
 // ================================
-
-// Inicialización general
 function init() {
   // Tabs inferiores
   document.querySelectorAll(".tab").forEach(t => {
@@ -203,31 +211,39 @@ function init() {
       if (t.dataset.tab === "graficos") drawCharts();
       if (t.dataset.tab === "historial") renderHistory();
     };
-    const st = loadStateFor(getActiveWeek());
-alert("✅ Semana activa: " + getActiveWeek() + " | días: " + (st?.days?.length || 0));
   });
 
   // Navegación de semanas
-  el("#prevWeek").onclick = () => shiftWeek(-7);
-  el("#nextWeek").onclick = () => shiftWeek(7);
+  const prev = el("#prevWeek"), next = el("#nextWeek");
+  if (prev) prev.onclick = () => shiftWeek(-7);
+  if (next) next.onclick = () => shiftWeek(7);
 
   // Controles
-  weekInput.addEventListener("change", e => createWeekIfMissing(e.target.value, true));
-  el("#newWeekBtn").onclick = () => {
+  if (weekInput) weekInput.addEventListener("change", e => createWeekIfMissing(e.target.value, true));
+  const newBtn = el("#newWeekBtn");
+  if (newBtn) newBtn.onclick = () => {
     const d = new Date();
     d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); // lunes actual
     createWeekIfMissing(d.toISOString().slice(0, 10), true);
   };
-  el("#duplicateWeekBtn").onclick = duplicateWeek;
-  el("#exportAllBtn").onclick = exportAll;
-  el("#exportWeekReport").onclick = exportWeekReport;
-  el("#importAllFile").addEventListener("change", importAll);
-  el("#resetBtn").onclick = resetAll;
-  el("#expandAll").onclick = () => toggleAll(true);
-  el("#collapseAll").onclick = () => toggleAll(false);
-  el("#addBlockFab").onclick = () => addBlockForToday();
+  const dupBtn = el("#duplicateWeekBtn");
+  if (dupBtn) dupBtn.onclick = duplicateWeek;
+  const exAllBtn = el("#exportAllBtn");
+  if (exAllBtn) exAllBtn.onclick = exportAll;
+  const exRepBtn = el("#exportWeekReport");
+  if (exRepBtn) exRepBtn.onclick = exportWeekReport;
+  const imp = el("#importAllFile");
+  if (imp) imp.addEventListener("change", importAll);
+  const resetBtn = el("#resetBtn");
+  if (resetBtn) resetBtn.onclick = resetAll;
+  const expAll = el("#expandAll");
+  if (expAll) expAll.onclick = () => toggleAll(true);
+  const colAll = el("#collapseAll");
+  if (colAll) colAll.onclick = () => toggleAll(false);
+  const fab = el("#addBlockFab");
+  if (fab) fab.onclick = () => addBlockForToday();
 
-  // Biomarcadores (si existen los inputs)
+  // Biomarcadores
   const bioBtn = el("#saveBio");
   if (bioBtn) {
     bioBtn.onclick = () => {
@@ -242,8 +258,8 @@ alert("✅ Semana activa: " + getActiveWeek() + " | días: " + (st?.days?.length
         notas: el("#bioNotas")?.value || ""
       };
       saveStateFor(wk, st);
-      alert("Biomarcadores guardados ✅");
       drawCharts();
+      alert("Biomarcadores guardados ✅");
     };
   }
 
@@ -267,6 +283,10 @@ function shiftWeek(days) {
 function createWeekIfMissing(weekStart, setActive) {
   const all = loadAll();
   if (!all[weekStart]) all[weekStart] = defaultPlan(weekStart);
+
+  // Reparar estructura si está rota
+  ensureWeekShape(weekStart);
+
   if (setActive) setActiveWeek(weekStart);
   if (weekInput) weekInput.value = weekStart;
   render();
@@ -276,9 +296,9 @@ function createWeekIfMissing(weekStart, setActive) {
 // Render principal (con auto-inicialización)
 function render() {
   const wk = getActiveWeek();
-  let st = wk ? loadStateFor(wk) : null;
 
-  if (!wk || !st) {
+  // Si no hay semana activa, crear la de este lunes
+  if (!wk) {
     const today = new Date();
     const monday = new Date(today);
     const gd = today.getDay();
@@ -288,9 +308,14 @@ function render() {
     return;
   }
 
+  // Asegurar forma correcta
+  ensureWeekShape(wk);
+
+  const st = loadStateFor(wk);
   const root = planner;
+  if (!root) return;
   root.innerHTML = "";
-planner.insertAdjacentHTML('beforeend','<div class="card" style="padding:12px">DEBUG: render() vivo</div>');
+
   st.days.forEach((day, idx) => {
     const sec = document.createElement("section");
     sec.className = "day card";
@@ -319,7 +344,7 @@ planner.insertAdjacentHTML('beforeend','<div class="card" style="padding:12px">D
   attachBlockHandlers();
 }
 
-// ===== Stubs y utilidades seguras =====
+// ===== Stubs y utilidades =====
 function duplicateWeek() {
   const cur = getActiveWeek();
   if (!cur) return alert("No hay semana activa");
@@ -377,124 +402,12 @@ function addBlockForToday() {
   const wk = getActiveWeek();
   const st = loadStateFor(wk);
   const today = new Date();
-  const gd = today.getDay(); // 0=domingo..6=sabado
-  const idx = (gd + 6) % 7; // 0=lunes..6=domingo
+  const gd = today.getDay(); // 0=domingo..6=sábado
+  const idx = (gd + 6) % 7;  // 0=lunes..6=domingo
   st.days[idx].blocks.push(LIBRE());
   saveStateFor(wk, st);
   render();
   alert("Bloque libre añadido al día de hoy ✅");
-}
-
-// Render de cada día
-function renderDayBlocks(container, day, idx) {
-  container.innerHTML = "";
-
-  day.blocks.forEach((block, bIdx) => {
-    const wrap = document.createElement("div");
-    wrap.className = "block " + (block.status === "done" ? "done" : block.status === "notdone" ? "notdone" : "");
-
-    const showNotDone = !isWeekend(idx);
-    const notDoneBtn = showNotDone ? `<button class="btn small" data-idx="${idx}" data-bidx="${bIdx}" data-act="notdone">No completado</button>` : "";
-    const completed = `<label><input type="checkbox" ${block.status === "done" ? "checked" : ""} data-idx="${idx}" data-bidx="${bIdx}" class="doneToggle"> Completado</label>`;
-
-    // --- Caminata ---
-    if (block.walk) {
-      const wd = block.walkData || { tiempo: "", distancia: "", fc: "", sensaciones: "" };
-      wrap.innerHTML = `
-        <header><strong>${block.type}</strong>
-          <div class="controls state-toggle">
-            ${completed}${notDoneBtn}
-          </div>
-        </header>
-        <div class="walk">
-          <label>Tiempo (min)<input type="number" step="1" class="walkInput" data-idx="${idx}" data-bidx="${bIdx}" data-field="tiempo" value="${wd.tiempo}"></label>
-          <label>Distancia (km)<input type="number" step="0.01" class="walkInput" data-idx="${idx}" data-bidx="${bIdx}" data-field="distancia" value="${wd.distancia}"></label>
-          <label>FC media (ppm)<input type="number" step="1" class="walkInput" data-idx="${idx}" data-bidx="${bIdx}" data-field="fc" value="${wd.fc}"></label>
-          <label style="grid-column:1/-1;">Sensaciones<textarea rows="3" class="walkText" data-idx="${idx}" data-bidx="${bIdx}" data-field="sensaciones">${wd.sensaciones}</textarea></label>
-        </div>
-      `;
-    }
-
-    // --- Entrenamiento libre ---
-    else if (block.kind === "libre") {
-      const c = block.custom || { tipo: "", distancia: "", tiempo: "", fc: "", sensaciones: "" };
-      wrap.innerHTML = `
-        <header><strong>${block.type}</strong>
-          <div class="controls state-toggle">
-            ${completed}
-            <button class="btn small" data-idx="${idx}" data-bidx="${bIdx}" data-act="addEx">Añadir ejercicio</button>
-          </div>
-        </header>
-        <div class="walk">
-          <label>Tipo de entrenamiento<input type="text" class="freeInput" data-idx="${idx}" data-bidx="${bIdx}" data-field="tipo" value="${c.tipo}"></label>
-          <label>Distancia<input type="text" class="freeInput" data-idx="${idx}" data-bidx="${bIdx}" data-field="distancia" value="${c.distancia}"></label>
-          <label>Tiempo<input type="text" class="freeInput" data-idx="${idx}" data-bidx="${bIdx}" data-field="tiempo" value="${c.tiempo}"></label>
-          <label>FC media (ppm)<input type="number" class="freeInput" data-idx="${idx}" data-bidx="${bIdx}" data-field="fc" value="${c.fc}"></label>
-          <label style="grid-column:1/-1;">Sensaciones<textarea rows="3" class="freeText" data-idx="${idx}" data-bidx="${bIdx}" data-field="sensaciones">${c.sensaciones}</textarea></label>
-        </div>
-      `;
-    }
-
-    // --- Bloques normales ---
-    else {
-      const maxSets = Math.max(0, ...(block.exercises || []).map(ex => (ex.sets || []).length));
-      const thead = `<th>Ejercicio</th><th>Objetivo</th>` +
-        Array.from({ length: maxSets }, (_, i) => `<th>Set ${i + 1}</th>`).join("");
-
-      const rows = (block.exercises || []).map((ex, eIdx) => {
-        const cols = Array.from({ length: maxSets }, (_, i) => {
-          const s = (ex.sets || [])[i] || { w: "", r: "" };
-          return `<td contenteditable class="cell" data-idx="${idx}" data-bidx="${bIdx}" data-eidx="${eIdx}" data-sidx="${i}">${s.w && s.r ? `${s.w} x ${s.r}` : ""}</td>`;
-        }).join("");
-        return `<tr><td contenteditable class="exName" data-idx="${idx}" data-bidx="${bIdx}" data-eidx="${eIdx}">${ex.name}</td><td contenteditable class="exTarget" data-idx="${idx}" data-bidx="${bIdx}" data-eidx="${eIdx}">${ex.target}</td>${cols}</tr>`;
-      }).join("");
-
-      wrap.innerHTML = `
-        <header><strong>${block.type}</strong>
-          <div class="controls state-toggle">
-            ${completed}${notDoneBtn}
-            <button class="btn small" data-idx="${idx}" data-bidx="${bIdx}" data-act="notes">Sensaciones</button>
-          </div>
-        </header>
-        <table class="ex-table"><thead><tr>${thead}</tr></thead><tbody>${rows}</tbody></table>
-      `;
-    }
-
-    container.appendChild(wrap);
-  });
-}
-
-// ===== Eventos básicos =====
-function attachBlockHandlers() {
-  document.querySelectorAll(".doneToggle").forEach(chk => {
-    chk.addEventListener("change", e => {
-      const c = e.target, wk = getActiveWeek(), st = loadStateFor(wk);
-      const b = st.days[c.dataset.idx].blocks[c.dataset.bidx];
-      b.status = c.checked ? "done" : "none";
-      saveStateFor(wk, st);
-      render();
-    });
-  });
-
-  document.querySelectorAll("button[data-act='notdone']").forEach(btn => {
-    btn.onclick = () => {
-      const i = +btn.dataset.idx, j = +btn.dataset.bidx, wk = getActiveWeek(), st = loadStateFor(wk);
-      st.days[i].blocks[j].status = "notdone";
-      saveStateFor(wk, st);
-      render();
-    };
-  });
-
-  document.querySelectorAll(".walkInput,.walkText,.freeInput,.freeText").forEach(inp => {
-    inp.addEventListener("input", e => {
-      const i = e.target, wk = getActiveWeek(), st = loadStateFor(wk);
-      const b = st.days[i.dataset.idx].blocks[i.dataset.bidx];
-      const field = i.dataset.field;
-      if (b.walkData) b.walkData[field] = i.value;
-      if (b.custom) b.custom[field] = i.value;
-      saveStateFor(wk, st);
-    });
-  });
 }
 
 // ================================
@@ -533,7 +446,6 @@ function renderHistory() {
 }
 
 function drawCharts() {
-  // Si no está Chart.js, salir sin romper nada
   if (typeof Chart === "undefined") return;
 
   const ctxPeso = document.getElementById("pesoChart")?.getContext("2d");
