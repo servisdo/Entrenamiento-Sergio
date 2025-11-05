@@ -78,6 +78,23 @@
     </section>
   </main>
 
+  <!-- Ventana emergente para resumen diario -->
+  <div id="modalShare" class="modal hidden">
+    <div class="modal-content card">
+      <h3>Resumen diario</h3>
+      <textarea id="shareTextarea" rows="10" readonly></textarea>
+      <div class="modal-actions">
+        <button id="shareCopy" class="btn small">Copiar</button>
+        <button id="shareDownload" class="btn small">Descargar</button>
+        <button id="shareClose" class="btn small">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Librería de gráficos -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Registro del Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -85,6 +102,8 @@
       });
     }
   </script>
+
+  <!-- Script principal -->
   <script src="script.js"></script>
 </body>
 </html>
