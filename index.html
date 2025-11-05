@@ -1,27 +1,28 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Entrenos Sergio — v4.1 (PWA)</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#0a84ff">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="styles.css">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Entrenos Sergio</title>
+  <meta name="theme-color" content="#0a84ff" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <link rel="icon" href="icons/icon-192.png" type="image/png" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <header>
     <h1>Entrenos Sergio</h1>
     <nav class="topbar">
-      <label>Semana: <input type="date" id="weekStart"></label>
+      <label>Semana: <input type="date" id="weekStart" /></label>
       <select id="weekPicker"></select>
       <button id="newWeekBtn" class="btn">Nueva semana</button>
       <button id="duplicateWeekBtn" class="btn">Duplicar semana</button>
       <button id="exportWeekReport" class="btn">Exportar reporte semana</button>
       <button id="exportAllBtn" class="btn">Exportar todo</button>
-      <input type="file" id="importAllFile" accept="application/json">
+      <input type="file" id="importAllFile" accept="application/json" />
       <button id="resetBtn" class="btn">Reset</button>
     </nav>
     <nav class="tabs">
@@ -36,11 +37,11 @@
     <section id="biometrics">
       <h2>Biomarcadores</h2>
       <div class="bio-grid">
-        <label>Peso (kg) <input type="number" id="peso" step="0.1"></label>
-        <label>Sueño (h) <input type="number" id="sueno" step="0.1"></label>
-        <label>Energía (1–5) <input type="number" id="energia" min="1" max="5"></label>
-        <label>Estrés (1–5) <input type="number" id="estres" min="1" max="5"></label>
-        <label>FC reposo (ppm) <input type="number" id="fcr" step="1"></label>
+        <label>Peso (kg) <input type="number" id="peso" step="0.1" /></label>
+        <label>Sueño (h) <input type="number" id="sueno" step="0.1" /></label>
+        <label>Energía (1–5) <input type="number" id="energia" min="1" max="5" /></label>
+        <label>Estrés (1–5) <input type="number" id="estres" min="1" max="5" /></label>
+        <label>FC reposo (ppm) <input type="number" id="fcr" step="1" /></label>
         <label>Notas de sensaciones <textarea id="bioNotas" rows="3" placeholder="¿Cómo te sentiste esta semana?"></textarea></label>
         <button id="saveBio" class="btn primary">Guardar biomarcadores</button>
       </div>
@@ -74,7 +75,7 @@
   </section>
 
   <footer>
-    <small>Funciona offline (PWA). Tus datos se guardan en este dispositivo.</small>
+    <small>Funciona offline. Tus datos se guardan en este dispositivo.</small>
   </footer>
 
   <!-- Modal notas -->
@@ -105,7 +106,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js').catch(console.error);
+        navigator.serviceWorker.register('./service-worker.js').catch(() => {});
       });
     }
   </script>
