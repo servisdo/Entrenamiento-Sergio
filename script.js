@@ -1,3 +1,4 @@
+console.log("✅ script.js cargado correctamente");
 // ================================
 //  BLOQUE 1 - ESTRUCTURA BASE
 // ================================
