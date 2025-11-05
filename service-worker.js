@@ -1,6 +1,6 @@
 // ====== Service Worker para modo offline ======
 
-const CACHE_NAME = "entrenos-sergio-v5";
+const CACHE_NAME = "entrenos-sergio-v6";
 const ASSETS = [
   "./",
   "./index.html",
