@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Entrenos Sergio</title>
   <meta name="theme-color" content="#0a84ff" />
   <link rel="manifest" href="manifest.json" />
@@ -12,96 +12,71 @@
   <link rel="icon" href="icons/icon-192.png" type="image/png" />
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
-  <header>
-    <h1>Entrenos Sergio</h1>
-    <nav class="topbar">
-      <label>Semana: <input type="date" id="weekStart" /></label>
-      <select id="weekPicker"></select>
-      <button id="newWeekBtn" class="btn">Nueva semana</button>
-      <button id="duplicateWeekBtn" class="btn">Duplicar semana</button>
-      <button id="exportWeekReport" class="btn">Exportar reporte semana</button>
-      <button id="exportAllBtn" class="btn">Exportar todo</button>
-      <input type="file" id="importAllFile" accept="application/json" />
+  <header class="mobile-header">
+    <h1>Entrenos</h1>
+    <div class="weekbar">
+      <button id="prevWeek" class="btn icon" aria-label="Semana anterior">‹</button>
+      <input type="date" id="weekStart" />
+      <button id="nextWeek" class="btn icon" aria-label="Semana siguiente">›</button>
+    </div>
+    <div class="toolbar">
+      <button id="newWeekBtn" class="btn">Nueva</button>
+      <button id="duplicateWeekBtn" class="btn">Duplicar</button>
+      <button id="exportAllBtn" class="btn">Exportar</button>
+      <label class="fileBtn">Importar <input type="file" id="importAllFile" accept="application/json" /></label>
       <button id="resetBtn" class="btn">Reset</button>
-    </nav>
-    <nav class="tabs">
-      <button class="tab active" data-tab="plan">Plan</button>
-      <button class="tab" data-tab="historial">Historial</button>
-      <button class="tab" data-tab="graficos">Gráficos</button>
-    </nav>
+    </div>
   </header>
 
-  <section id="tab-plan" class="tab-pane active">
-    <main id="planner"></main>
-    <section id="biometrics">
-      <h2>Biomarcadores</h2>
-      <div class="bio-grid">
-        <label>Peso (kg) <input type="number" id="peso" step="0.1" /></label>
-        <label>Sueño (h) <input type="number" id="sueno" step="0.1" /></label>
-        <label>Energía (1–5) <input type="number" id="energia" min="1" max="5" /></label>
-        <label>Estrés (1–5) <input type="number" id="estres" min="1" max="5" /></label>
-        <label>FC reposo (ppm) <input type="number" id="fcr" step="1" /></label>
-        <label>Notas de sensaciones <textarea id="bioNotas" rows="3" placeholder="¿Cómo te sentiste esta semana?"></textarea></label>
-        <button id="saveBio" class="btn primary">Guardar biomarcadores</button>
+  <nav class="bottom-tabs" role="tablist">
+    <button class="tab active" data-tab="plan" aria-selected="true">Plan</button>
+    <button class="tab" data-tab="historial" aria-selected="false">Historial</button>
+    <button class="tab" data-tab="graficos" aria-selected="false">Gráficos</button>
+  </nav>
+
+  <main id="content">
+    <section id="tab-plan" class="tab-pane active" role="tabpanel" aria-label="Plan">
+      <div class="daylist-actions">
+        <button id="expandAll" class="btn small">Expandir todo</button>
+        <button id="collapseAll" class="btn small">Colapsar todo</button>
+        <button id="exportWeekReport" class="btn small">Reporte semana</button>
+      </div>
+
+      <div id="planner"></div>
+
+      <section id="biometrics" class="card">
+        <h2>Biomarcadores</h2>
+        <div class="bio-grid">
+          <label>Peso (kg) <input type="number" id="peso" step="0.1" inputmode="decimal"></label>
+          <label>Sueño (h) <input type="number" id="sueno" step="0.1" inputmode="decimal"></label>
+          <label>Energía (1–5) <input type="number" id="energia" min="1" max="5" inputmode="numeric"></label>
+          <label>Estrés (1–5) <input type="number" id="estres" min="1" max="5" inputmode="numeric"></label>
+          <label>FC reposo (ppm) <input type="number" id="fcr" step="1" inputmode="numeric"></label>
+          <label>Notas de sensaciones <textarea id="bioNotas" rows="3"></textarea></label>
+        </div>
+        <button id="saveBio" class="btn primary wide">Guardar biomarcadores</button>
+      </section>
+
+      <div class="fab-wrap">
+        <button id="addBlockFab" class="fab" title="Añadir bloque">＋</button>
       </div>
     </section>
-  </section>
 
-  <section id="tab-historial" class="tab-pane">
-    <div id="history"></div>
-  </section>
+    <section id="tab-historial" class="tab-pane" role="tabpanel" aria-label="Historial">
+      <div id="history"></div>
+    </section>
 
-  <section id="tab-graficos" class="tab-pane">
-    <div class="charts">
-      <div class="chart-card">
-        <h3>Peso corporal por semana</h3>
-        <canvas id="pesoChart" width="600" height="300"></canvas>
+    <section id="tab-graficos" class="tab-pane" role="tabpanel" aria-label="Gráficos">
+      <div class="charts">
+        <div class="chart-card card"><h3>Peso corporal por semana</h3><canvas id="pesoChart"></canvas></div>
+        <div class="chart-card card"><h3>Volumen semanal (kg·reps)</h3><canvas id="volChart"></canvas></div>
+        <div class="chart-card card"><h3>Caminata: tiempo total (min)</h3><canvas id="walkTimeChart"></canvas></div>
+        <div class="chart-card card"><h3>Caminata: distancia total (km)</h3><canvas id="walkDistChart"></canvas></div>
       </div>
-      <div class="chart-card">
-        <h3>Volumen de entrenamiento por semana (kg·reps)</h3>
-        <canvas id="volChart" width="600" height="300"></canvas>
-      </div>
-      <div class="chart-card">
-        <h3>Tiempo total de caminata (min/semana)</h3>
-        <canvas id="walkTimeChart" width="600" height="300"></canvas>
-      </div>
-      <div class="chart-card">
-        <h3>Distancia total de caminata (km/semana)</h3>
-        <canvas id="walkDistChart" width="600" height="300"></canvas>
-        <p id="walkHrAvg" class="hr-avg"></p>
-      </div>
-    </div>
-  </section>
-
-  <footer>
-    <small>Funciona offline. Tus datos se guardan en este dispositivo.</small>
-  </footer>
-
-  <!-- Modal notas -->
-  <div id="modal" class="modal hidden">
-    <div class="modal-box">
-      <h3 id="modalTitle">Editar notas</h3>
-      <textarea id="modalTextarea" rows="8"></textarea>
-      <div class="modal-actions">
-        <button id="modalCancel" class="btn">Cancelar</button>
-        <button id="modalSave" class="btn primary">Guardar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal resumen diario -->
-  <div id="modalShare" class="modal hidden">
-    <div class="modal-box">
-      <h3 id="shareTitle">Resumen diario</h3>
-      <textarea id="shareTextarea" rows="12" readonly></textarea>
-      <div class="modal-actions">
-        <button id="shareClose" class="btn">Cerrar</button>
-        <button id="shareCopy" class="btn">Copiar</button>
-        <button id="shareDownload" class="btn primary">Descargar TXT</button>
-      </div>
-    </div>
-  </div>
+    </section>
+  </main>
 
   <script>
     if ('serviceWorker' in navigator) {
