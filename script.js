@@ -1,7 +1,3 @@
-alert("✅ El script de Sergio está funcionando correctamente");
-window.addEventListener("error", function (e) {
-  alert("❌ Error JS: " + e.message + "  @línea " + (e.lineno||"?") + ":" + (e.colno||"?"));
-});
 // ================================
 //  BLOQUE 1 - ESTRUCTURA BASE
 // ================================
@@ -22,29 +18,23 @@ function loadAll() {
   try { return JSON.parse(localStorage.getItem("sergio-weeks") || "{}"); }
   catch { return {}; }
 }
-
 function saveAll(all) {
   localStorage.setItem("sergio-weeks", JSON.stringify(all));
 }
-
 function loadStateFor(weekStart) {
   return loadAll()[weekStart];
 }
-
 function saveStateFor(weekStart, state) {
   const all = loadAll();
   all[weekStart] = state;
   saveAll(all);
 }
-
 function setActiveWeek(w) {
   localStorage.setItem("sergio-active-week", w);
 }
-
 function getActiveWeek() {
   return localStorage.getItem("sergio-active-week");
 }
-
 function listWeeks() {
   return Object.keys(loadAll()).sort();
 }
@@ -70,7 +60,6 @@ function WU_Anterior() {
     ]
   };
 }
-
 function WU_Posterior() {
   return {
     type: "Calentamiento — Cara posterior",
@@ -82,7 +71,6 @@ function WU_Posterior() {
     ]
   };
 }
-
 function WU_HIIT() {
   return {
     type: "Calentamiento — HIIT",
@@ -108,7 +96,6 @@ function BL_Anterior() {
     ]
   };
 }
-
 function BL_Posterior() {
   return {
     type: "Cara posterior",
@@ -122,7 +109,6 @@ function BL_Posterior() {
     ]
   };
 }
-
 function BL_HIIT() {
   return {
     type: "HIIT",
@@ -191,13 +177,13 @@ function defaultPlan(weekStart) {
     biometrics: {}
   };
 }
+
 // ================================
 //   BLOQUE 2 - INTERACCIÓN Y RENDERIZADO
 // ================================
 
 // Inicialización general
 function init() {
-  alert("✅ Entré en init()");
   // Tabs inferiores
   document.querySelectorAll(".tab").forEach(t => {
     t.onclick = () => {
@@ -219,6 +205,7 @@ function init() {
   el("#prevWeek").onclick = () => shiftWeek(-7);
   el("#nextWeek").onclick = () => shiftWeek(7);
 
+  // Controles
   weekInput.addEventListener("change", e => createWeekIfMissing(e.target.value, true));
   el("#newWeekBtn").onclick = () => {
     const d = new Date();
@@ -234,6 +221,26 @@ function init() {
   el("#collapseAll").onclick = () => toggleAll(false);
   el("#addBlockFab").onclick = () => addBlockForToday();
 
+  // Biomarcadores (si existen los inputs)
+  const bioBtn = el("#saveBio");
+  if (bioBtn) {
+    bioBtn.onclick = () => {
+      const wk = getActiveWeek();
+      const st = loadStateFor(wk);
+      st.biometrics = {
+        peso: el("#peso")?.value || "",
+        sueno: el("#sueno")?.value || "",
+        energia: el("#energia")?.value || "",
+        estres: el("#estres")?.value || "",
+        fcr: el("#fcr")?.value || "",
+        notas: el("#bioNotas")?.value || ""
+      };
+      saveStateFor(wk, st);
+      alert("Biomarcadores guardados ✅");
+      drawCharts();
+    };
+  }
+
   // Semana actual por defecto
   const today = new Date();
   const monday = new Date(today);
@@ -245,7 +252,8 @@ function init() {
 
 // Cambiar de semana
 function shiftWeek(days) {
-  const cur = new Date(getActiveWeek());
+  const curStr = getActiveWeek();
+  const cur = curStr ? new Date(curStr) : new Date();
   cur.setDate(cur.getDate() + days);
   createWeekIfMissing(cur.toISOString().slice(0, 10), true);
 }
@@ -254,17 +262,16 @@ function createWeekIfMissing(weekStart, setActive) {
   const all = loadAll();
   if (!all[weekStart]) all[weekStart] = defaultPlan(weekStart);
   if (setActive) setActiveWeek(weekStart);
-  weekInput.value = weekStart;
+  if (weekInput) weekInput.value = weekStart;
   render();
   renderHistory();
 }
 
-// Render principal
+// Render principal (con auto-inicialización)
 function render() {
   const wk = getActiveWeek();
   let st = wk ? loadStateFor(wk) : null;
 
-  // Si no hay semana activa o está vacía, crea la de este lunes y reintenta
   if (!wk || !st) {
     const today = new Date();
     const monday = new Date(today);
@@ -272,7 +279,7 @@ function render() {
     monday.setDate(monday.getDate() + (gd === 0 ? -6 : 1 - gd));
     const newWk = monday.toISOString().slice(0, 10);
     createWeekIfMissing(newWk, true);
-    return; // dejamos que el siguiente render (llamado por createWeekIfMissing) pinte todo
+    return;
   }
 
   const root = planner;
@@ -306,7 +313,72 @@ function render() {
   attachBlockHandlers();
 }
 
-  
+// ===== Stubs y utilidades seguras =====
+function duplicateWeek() {
+  const cur = getActiveWeek();
+  if (!cur) return alert("No hay semana activa");
+  const d = new Date(cur);
+  d.setDate(d.getDate() + 7);
+  const next = d.toISOString().slice(0, 10);
+  const st = JSON.parse(JSON.stringify(loadStateFor(cur)));
+  st.weekStart = next;
+  saveStateFor(next, st);
+  setActiveWeek(next);
+  if (weekInput) weekInput.value = next;
+  render();
+  alert("Semana duplicada ✅");
+}
+
+function exportWeekReport() {
+  const wk = getActiveWeek();
+  const st = loadStateFor(wk);
+  if (!st) return alert("No hay datos de esta semana");
+  let txt = `📅 Reporte semanal (${wk})\n\n`;
+  st.days.forEach(day => {
+    txt += `== ${day.name} ==\n`;
+    day.blocks.forEach(b => {
+      txt += `• ${b.type}\n`;
+      if (b.walk && b.walkData) {
+        const d = b.walkData;
+        txt += `   - Tiempo: ${d.tiempo||"-"} min | Dist: ${d.distancia||"-"} km | FC: ${d.fc||"-"} | Sens.: ${d.sensaciones||"-"}\n`;
+      } else if (b.kind === "libre" && b.custom) {
+        const c = b.custom;
+        txt += `   - Tipo: ${c.tipo||"-"} | Dist: ${c.distancia||"-"} | Tiempo: ${c.tiempo||"-"} | FC: ${c.fc||"-"} | Sens.: ${c.sensaciones||"-"}\n`;
+      } else if (b.exercises) {
+        b.exercises.forEach(ex => {
+          const sets = (ex.sets||[]).map(s => s.w && s.r ? `${s.w}x${s.r}` : "").filter(Boolean).join(", ");
+          txt += `   - ${ex.name} (${ex.target||""}) ${sets ? "→ " + sets : ""}\n`;
+        });
+      }
+    });
+    txt += `\n`;
+  });
+  const blob = new Blob([txt], {type:"text/plain"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `reporte_${wk}.txt`;
+  a.click();
+}
+
+function toggleAll(open) {
+  document.querySelectorAll(".details").forEach(d => {
+    if (open) d.classList.add("open");
+    else d.classList.remove("open");
+  });
+}
+
+function addBlockForToday() {
+  const wk = getActiveWeek();
+  const st = loadStateFor(wk);
+  const today = new Date();
+  const gd = today.getDay(); // 0=domingo..6=sabado
+  const idx = (gd + 6) % 7; // 0=lunes..6=domingo
+  st.days[idx].blocks.push(LIBRE());
+  saveStateFor(wk, st);
+  render();
+  alert("Bloque libre añadido al día de hoy ✅");
+}
+
 // Render de cada día
 function renderDayBlocks(container, day, idx) {
   container.innerHTML = "";
@@ -419,16 +491,13 @@ function attachBlockHandlers() {
   });
 }
 
-// Inicializa al cargar
-window.addEventListener("DOMContentLoaded", init);
 // ================================
 //  BLOQUE 3 - HISTORIAL, GRÁFICOS Y RESUMEN DIARIO
 // ================================
-
-// ====== Historial ======
 function renderHistory() {
   const all = loadAll();
   const container = document.getElementById("history");
+  if (!container) return;
   container.innerHTML = "";
 
   const weeks = listWeeks();
@@ -449,19 +518,23 @@ function renderHistory() {
     container.appendChild(card);
     card.querySelector("button").onclick = () => {
       setActiveWeek(w);
-      weekInput.value = w;
+      if (weekInput) weekInput.value = w;
       render();
-      el('[data-tab="plan"]').click();
+      const planTab = el('[data-tab="plan"]');
+      if (planTab) planTab.click();
     };
   });
 }
 
-// ====== Gráficos ======
 function drawCharts() {
-  const ctxPeso = document.getElementById("pesoChart").getContext("2d");
-  const ctxVol = document.getElementById("volChart").getContext("2d");
-  const ctxWalkT = document.getElementById("walkTimeChart").getContext("2d");
-  const ctxWalkD = document.getElementById("walkDistChart").getContext("2d");
+  // Si no está Chart.js, salir sin romper nada
+  if (typeof Chart === "undefined") return;
+
+  const ctxPeso = document.getElementById("pesoChart")?.getContext("2d");
+  const ctxVol = document.getElementById("volChart")?.getContext("2d");
+  const ctxWalkT = document.getElementById("walkTimeChart")?.getContext("2d");
+  const ctxWalkD = document.getElementById("walkDistChart")?.getContext("2d");
+  if (!ctxPeso || !ctxVol || !ctxWalkT || !ctxWalkD) return;
 
   const weeks = listWeeks();
   const all = loadAll();
@@ -503,10 +576,10 @@ function drawCharts() {
   if (window._walkTChart) window._walkTChart.destroy();
   if (window._walkDChart) window._walkDChart.destroy();
 
-  window._pesoChart = new Chart(ctxPeso, { type: "line", data: { datasets: [{ label: "Peso (kg)", data: pesos, borderColor: "#0a84ff" }] }, options: opts });
-  window._volChart = new Chart(ctxVol, { type: "bar", data: { datasets: [{ label: "Volumen (kg·reps)", data: volumen, backgroundColor: "#0a84ff" }] }, options: opts });
-  window._walkTChart = new Chart(ctxWalkT, { type: "bar", data: { datasets: [{ label: "Tiempo caminata (min)", data: walkTime, backgroundColor: "#0a84ff" }] }, options: opts });
-  window._walkDChart = new Chart(ctxWalkD, { type: "bar", data: { datasets: [{ label: "Distancia caminata (km)", data: walkDist, backgroundColor: "#0a84ff" }] }, options: opts });
+  window._pesoChart = new Chart(ctxPeso, { type: "line", data: { datasets: [{ label: "Peso (kg)", data: pesos }] }, options: opts });
+  window._volChart = new Chart(ctxVol, { type: "bar", data: { datasets: [{ label: "Volumen (kg·reps)", data: volumen }] }, options: opts });
+  window._walkTChart = new Chart(ctxWalkT, { type: "bar", data: { datasets: [{ label: "Tiempo caminata (min)", data: walkTime }] }, options: opts });
+  window._walkDChart = new Chart(ctxWalkD, { type: "bar", data: { datasets: [{ label: "Distancia caminata (km)", data: walkDist }] }, options: opts });
 }
 
 // ====== Resumen diario ======
@@ -514,7 +587,7 @@ function openDailySummary(idx) {
   const wk = getActiveWeek();
   const st = loadStateFor(wk);
   const day = st.days[idx];
-  let txt = `📅 **${day.name} (${wk})**\n\n`;
+  let txt = `📅 ${day.name} (${wk})\n\n`;
 
   day.blocks.forEach(b => {
     txt += `🟦 ${b.type}\n`;
@@ -536,15 +609,17 @@ function openDailySummary(idx) {
   });
 
   const modal = document.getElementById("modalShare");
+  if (!modal) return;
   modal.classList.remove("hidden");
-  document.getElementById("shareTextarea").value = txt;
+  const ta = document.getElementById("shareTextarea");
+  if (ta) ta.value = txt;
 
-  document.getElementById("shareCopy").onclick = () => {
-    navigator.clipboard.writeText(txt);
-    alert("Resumen copiado ✅");
-  };
+  const btnC = document.getElementById("shareCopy");
+  const btnD = document.getElementById("shareDownload");
+  const btnX = document.getElementById("shareClose");
 
-  document.getElementById("shareDownload").onclick = () => {
+  if (btnC) btnC.onclick = () => { navigator.clipboard.writeText(txt); alert("Resumen copiado ✅"); };
+  if (btnD) btnD.onclick = () => {
     const blob = new Blob([txt], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -553,20 +628,18 @@ function openDailySummary(idx) {
     a.click();
     URL.revokeObjectURL(url);
   };
-
-  document.getElementById("shareClose").onclick = () => modal.classList.add("hidden");
+  if (btnX) btnX.onclick = () => modal.classList.add("hidden");
 }
 
-// ====== Exportar / Importar ======
+// ====== Exportar / Importar / Borrar ======
 function exportAll() {
-  const data = localStorage.getItem("sergio-weeks");
+  const data = localStorage.getItem("sergio-weeks") || "{}";
   const blob = new Blob([data], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = "entrenos_sergio.json";
   a.click();
 }
-
 function importAll(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -577,14 +650,14 @@ function importAll(e) {
       saveAll(data);
       alert("Datos importados correctamente ✅");
       render();
+      renderHistory();
+      drawCharts();
     } catch {
       alert("Error al importar");
     }
   };
   reader.readAsText(file);
 }
-
-// ====== Borrar todo ======
 function resetAll() {
   if (confirm("¿Seguro que quieres borrar todos los datos?")) {
     localStorage.removeItem("sergio-weeks");
@@ -592,14 +665,13 @@ function resetAll() {
     location.reload();
   }
 }
-function duplicateWeek() {
-  alert("⚙️ Duplicar semana aún no implementado, pero el sistema ya funciona correctamente");
-}
-alert("✅ Voy a registrar DOMContentLoaded");
+
+// Inicializa al cargar
 window.addEventListener("DOMContentLoaded", init);
-// ====== PWA modo offline ======
+
+// ====== PWA modo offline (registro SW) ======
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js");
+    navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
   });
 }
