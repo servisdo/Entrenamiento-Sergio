@@ -194,6 +194,7 @@ function defaultPlan(weekStart) {
 
 // Inicialización general
 function init() {
+  alert("✅ Entré en init()");
   // Tabs inferiores
   document.querySelectorAll(".tab").forEach(t => {
     t.onclick = () => {
@@ -578,6 +579,7 @@ function resetAll() {
 
 // ====== PWA modo offline ======
 if ("serviceWorker" in navigator) {
+  alert("✅ Voy a registrar DOMContentLoaded");
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("./service-worker.js");
   });
