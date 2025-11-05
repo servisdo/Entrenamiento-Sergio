@@ -579,6 +579,9 @@ function resetAll() {
     location.reload();
   }
 }
+function duplicateWeek() {
+  alert("⚙️ Duplicar semana aún no implementado, pero el sistema ya funciona correctamente");
+}
 alert("✅ Voy a registrar DOMContentLoaded");
 window.addEventListener("DOMContentLoaded", init);
 // ====== PWA modo offline ======
