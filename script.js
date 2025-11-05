@@ -1,4 +1,7 @@
 alert("✅ El script de Sergio está funcionando correctamente");
+window.addEventListener("error", function (e) {
+  alert("❌ Error JS: " + e.message + "  @línea " + (e.lineno||"?") + ":" + (e.colno||"?"));
+});
 // ================================
 //  BLOQUE 1 - ESTRUCTURA BASE
 // ================================
@@ -576,10 +579,10 @@ function resetAll() {
     location.reload();
   }
 }
-
+alert("✅ Voy a registrar DOMContentLoaded");
+window.addEventListener("DOMContentLoaded", init);
 // ====== PWA modo offline ======
 if ("serviceWorker" in navigator) {
-  alert("✅ Voy a registrar DOMContentLoaded");
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("./service-worker.js");
   });
