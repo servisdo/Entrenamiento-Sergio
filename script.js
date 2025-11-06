@@ -1,10 +1,9 @@
-alert("✅ Script de Sergio funcionando (v22)");
+alert("✅ Script de Sergio funcionando (v23)");
 
 // ================================
 //  CONFIGURACIÓN BASE
 // ================================
 const planner = document.getElementById("planner");
-const DAYS = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
 
 // ================================
 //  PLAN SEMANAL POR DEFECTO
@@ -22,28 +21,25 @@ function defaultPlan() {
 }
 
 // ================================
-//  FUNCIÓN PRINCIPAL DE RENDERIZADO
+//  RENDER
 // ================================
 function renderWeek() {
-  planner.innerHTML = ""; // limpiar
+  planner.innerHTML = "";
   const week = defaultPlan();
 
   week.forEach((day, idx) => {
     const sec = document.createElement("section");
     sec.className = "day card";
 
-    const bloquesHTML = day.bloques
-      .map(
-        (b, i) => `
-        <li class="bloque" data-day="${idx}" data-block="${i}">
-          <span>${b}</span>
-          <div class="acciones">
-            <button class="btn-ok">✅</button>
-            <button class="btn-no">❌</button>
-          </div>
-        </li>`
-      )
-      .join("");
+    const bloquesHTML = day.bloques.map((b, i) => `
+      <li class="bloque" data-day="${idx}" data-block="${i}">
+        <span>${b}</span>
+        <div class="acciones">
+          <button class="btn-ok" type="button">✅</button>
+          <button class="btn-no" type="button">❌</button>
+        </div>
+      </li>
+    `).join("");
 
     sec.innerHTML = `
       <h3>${day.name}</h3>
@@ -53,33 +49,42 @@ function renderWeek() {
   });
 
   attachListeners();
-  console.log("✅ Semana renderizada correctamente");
 }
 
 // ================================
-//  EVENTOS DE INTERACCIÓN
+//  INTERACCIÓN
 // ================================
+function paintState(li, state) {
+  // estado visual con clase + inline (por si el CSS no carga)
+  li.classList.remove("hecho", "nohecho");
+  li.style.background = ""; // limpia inline anterior
+
+  if (state === "ok") {
+    li.classList.add("hecho");
+    li.style.background = "#d6f8d6";
+  } else if (state === "no") {
+    li.classList.add("nohecho");
+    li.style.background = "#f9d6d6";
+  }
+}
+
 function attachListeners() {
   document.querySelectorAll(".btn-ok").forEach(btn => {
     btn.onclick = e => {
       const li = e.target.closest(".bloque");
-      li.classList.remove("nohecho");
-      li.classList.add("hecho");
+      paintState(li, "ok");
     };
   });
 
   document.querySelectorAll(".btn-no").forEach(btn => {
     btn.onclick = e => {
       const li = e.target.closest(".bloque");
-      li.classList.remove("hecho");
-      li.classList.add("nohecho");
+      paintState(li, "no");
     };
   });
 }
 
 // ================================
-//  ARRANQUE AUTOMÁTICO
+//  ARRANQUE
 // ================================
-document.addEventListener("DOMContentLoaded", () => {
-  renderWeek();
-});
+document.addEventListener("DOMContentLoaded", renderWeek);
