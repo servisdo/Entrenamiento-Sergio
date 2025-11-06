@@ -7,6 +7,28 @@ const weekInput = el("#weekStart");
 const DAY_NAMES = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
 const isWeekend = (i) => i === 5 || i === 6;
 
+// ----- Tabs: helpers -----
+function activeTabName() {
+  const t = document.querySelector(".tab.active");
+  return t ? t.dataset.tab : "plan";
+}
+function showTab(tabName) {
+  // Botones
+  document.querySelectorAll(".tab").forEach(x => {
+    const isActive = x.dataset.tab === tabName;
+    x.classList.toggle("active", isActive);
+    x.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+  // Paneles
+  document.querySelectorAll(".tab-pane").forEach(p => {
+    p.classList.toggle("active", p.id === "tab-" + tabName);
+  });
+  // Render perezoso
+  if (tabName === "plan") render();
+  else if (tabName === "historial") renderHistory();
+  else if (tabName === "graficos") drawCharts();
+}
+
 // ---- Almacenamiento (localStorage) ----
 function loadAll() {
   try { return JSON.parse(localStorage.getItem("sergio-weeks") || "{}"); }
@@ -105,15 +127,13 @@ function BL_HIIT() {
   };
 }
 
-// Enfriamiento (solo L y V)
+// Enfriamiento
 function COOLDOWN() {
   return {
     type: "Enfriamiento",
     fixed: true,
     status: "none",
-    exercises: [
-      ex("Cinta + estiramientos", "10 min", 0)
-    ]
+    exercises: [ ex("Cinta + estiramientos", "10 min", 0) ]
   };
 }
 
@@ -173,21 +193,9 @@ function ensureWeekShape(weekStart) {
 //  INICIALIZACIÓN DE LA APP
 // ================================
 function init() {
-  // Tabs
+  // Tabs: click -> showTab
   document.querySelectorAll(".tab").forEach(t => {
-    t.onclick = () => {
-      document.querySelectorAll(".tab").forEach(x => {
-        x.classList.remove("active");
-        x.setAttribute("aria-selected", "false");
-      });
-      document.querySelectorAll(".tab-pane").forEach(x => x.classList.remove("active"));
-      t.classList.add("active");
-      t.setAttribute("aria-selected", "true");
-      el("#tab-" + t.dataset.tab).classList.add("active");
-
-      if (t.dataset.tab === "graficos") drawCharts();
-      if (t.dataset.tab === "historial") renderHistory();
-    };
+    t.onclick = () => showTab(t.dataset.tab);
   });
 
   // Navegación semanas
@@ -219,8 +227,8 @@ function init() {
   const wk = monday.toISOString().slice(0,10);
   createWeekIfMissing(wk, true);
 
-  // iOS puede tardar en pintar
-  setTimeout(render, 100);
+  // Arranca pintando SOLO el Plan
+  setTimeout(() => showTab("plan"), 100);
 }
 
 function shiftWeek(days) {
@@ -236,8 +244,12 @@ function createWeekIfMissing(weekStart, setActive) {
   ensureWeekShape(weekStart);
   if (setActive) setActiveWeek(weekStart);
   if (weekInput) weekInput.value = weekStart;
-  render();
-  renderHistory();
+
+  // Re-render SOLO del tab activo
+  const tab = activeTabName();
+  if (tab === "plan") render();
+  else if (tab === "historial") renderHistory();
+  else if (tab === "graficos") drawCharts();
 }
 
 // ================================
@@ -391,7 +403,7 @@ function attachBlockHandlers() {
       const b = st.days[i.dataset.idx].blocks[i.dataset.bidx];
       const field = i.dataset.field;
       if (b.walkData) b.walkData[field] = i.value;
-      if (b.custom) b.custom[field] = i.value;
+      if (b.custom)   b.custom[field]   = i.value;
       saveStateFor(wk, st);
     });
   });
@@ -411,7 +423,7 @@ function attachBlockHandlers() {
     });
   });
 
-  // Notas de sensaciones por bloque (simple prompt)
+  // Notas de sensaciones por bloque
   document.querySelectorAll("button[data-act='notes']").forEach(btn => {
     btn.onclick = () => {
       const i = +btn.dataset.idx, j = +btn.dataset.bidx, wk = getActiveWeek(), st = loadStateFor(wk);
@@ -451,8 +463,7 @@ function renderHistory() {
     card.querySelector("button").onclick = () => {
       setActiveWeek(w);
       if (weekInput) weekInput.value = w;
-      render();
-      el('[data-tab="plan"]')?.click();
+      showTab("plan"); // cambiar a Plan y renderizar ahí
     };
   });
 }
@@ -574,8 +585,12 @@ function importAll(e) {
     try {
       const data = JSON.parse(reader.result);
       saveAll(data);
+      // Re-pinta SOLO el tab activo
+      const tab = activeTabName();
+      if (tab === "plan") render();
+      else if (tab === "historial") renderHistory();
+      else if (tab === "graficos") drawCharts();
       alert("Datos importados ✅");
-      render(); renderHistory(); drawCharts();
     } catch { alert("Error al importar"); }
   };
   reader.readAsText(file);
@@ -599,7 +614,7 @@ function saveBiomarkers() {
     notas: el("#bioNotas")?.value || ""
   };
   saveStateFor(wk, st);
-  drawCharts();
+  if (activeTabName() === "graficos") drawCharts();
   alert("Biomarcadores guardados ✅");
 }
 
@@ -624,7 +639,7 @@ function duplicateWeek() {
   saveStateFor(next, st);
   setActiveWeek(next);
   if (weekInput) weekInput.value = next;
-  render();
+  showTab("plan");
   alert("Semana duplicada ✅");
 }
 function exportWeekReport() {
