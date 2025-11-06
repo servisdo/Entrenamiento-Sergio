@@ -1,25 +1,51 @@
-alert("✅ Script cargado correctamente (v20)");
+alert("✅ Script de Sergio funcionando (v21)");
 
-// --- Selección del contenedor ---
+// ================================
+//  CONFIGURACIÓN BASE
+// ================================
 const planner = document.getElementById("planner");
-if (!planner) {
-  alert("❌ No se encontró #planner en el HTML");
-} else {
-  alert("✅ Contenedor planner encontrado");
+const DAYS = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
+
+// ================================
+//  PLAN SEMANAL POR DEFECTO
+// ================================
+function defaultPlan() {
+  return [
+    { name: "Lunes", bloques: ["Caminata", "Calentamiento anterior", "Entreno cara anterior"] },
+    { name: "Martes", bloques: ["Caminata", "Descanso activo"] },
+    { name: "Miércoles", bloques: ["Caminata", "HIIT"] },
+    { name: "Jueves", bloques: ["Caminata", "Descanso activo"] },
+    { name: "Viernes", bloques: ["Caminata", "Calentamiento posterior", "Entreno cara posterior"] },
+    { name: "Sábado", bloques: ["Entrenamiento libre"] },
+    { name: "Domingo", bloques: ["Entrenamiento libre"] }
+  ];
 }
 
-// --- Generar semana de prueba ---
-const DAYS = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
-planner.innerHTML = ""; // limpiar
+// ================================
+//  FUNCIÓN PRINCIPAL DE RENDERIZADO
+// ================================
+function renderWeek() {
+  planner.innerHTML = ""; // limpiar
+  const week = defaultPlan();
 
-DAYS.forEach(d => {
-  const sec = document.createElement("section");
-  sec.className = "day card";
-  sec.innerHTML = `
-    <h3>${d}</h3>
-    <p>Entrenamiento de ejemplo para ${d}</p>
-  `;
-  planner.appendChild(sec);
+  week.forEach((day, idx) => {
+    const sec = document.createElement("section");
+    sec.className = "day card";
+    const bloquesHTML = day.bloques.map(b => `<li>${b}</li>`).join("");
+    sec.innerHTML = `
+      <h3>${day.name}</h3>
+      <ul>${bloquesHTML}</ul>
+    `;
+    planner.appendChild(sec);
+  });
+
+  console.log("✅ Semana renderizada correctamente");
+  alert("✅ Semana actual generada");
+}
+
+// ================================
+//  ARRANQUE AUTOMÁTICO
+// ================================
+document.addEventListener("DOMContentLoaded", () => {
+  renderWeek();
 });
-
-alert("✅ Semana de prueba generada correctamente");
