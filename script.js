@@ -12,7 +12,6 @@ function activeTabName() {
   const t = document.querySelector(".tab.active");
   return t ? t.dataset.tab : "plan";
 }
-// ======= FIX TABS (v27) =======
 function showTab(tabName) {
   // Botones
   document.querySelectorAll(".tab").forEach(x => {
@@ -24,32 +23,11 @@ function showTab(tabName) {
   document.querySelectorAll(".tab-pane").forEach(p => {
     p.classList.toggle("active", p.id === "tab-" + tabName);
   });
-  // Render perezoso por pestaña
-  if (tabName === "plan") {
-    render();
-  } else if (tabName === "historial") {
-    renderHistory();
-  } else if (tabName === "graficos") {
-    drawCharts();
-  }
+  // Render perezoso
+  if (tabName === "plan") render();
+  else if (tabName === "historial") renderHistory();
+  else if (tabName === "graficos") drawCharts();
 }
-
-// Delegación de eventos robusta (evita problemas de overlay)
-document.addEventListener("click", (e) => {
-  const t = e.target.closest(".tab");
-  if (!t) return;
-  e.preventDefault();
-  const name = t.dataset.tab || "plan";
-  showTab(name);
-});
-
-// Arranque seguro: si no hay tab activo, usa "plan"
-document.addEventListener("DOMContentLoaded", () => {
-  const activeBtn = document.querySelector(".tab.active");
-  const initial = activeBtn ? activeBtn.dataset.tab : "plan";
-  showTab(initial);
-});
-
 
 // ---- Almacenamiento (localStorage) ----
 function loadAll() {
@@ -159,13 +137,13 @@ function COOLDOWN() {
   };
 }
 
-// Caminata diaria (L–V)
-function WALK() {
+// Cardio (nuevo: sustituye a "Caminata diaria")
+function CARDIO() {
   return {
-    type: "Caminata diaria",
-    walk: true,
+    type: "Cardio",
+    cardio: true,
     status: "none",
-    walkData: { tiempo: "", distancia: "", fc: "", sensaciones: "" }
+    cardioData: { modalidad: "Caminata", tiempo: "", distancia: "", fc: "", sensaciones: "" }
   };
 }
 
@@ -187,11 +165,11 @@ function defaultPlan(weekStart) {
   return {
     weekStart,
     days: [
-      { name: "Lunes",     blocks: [WALK(), WU_Anterior(),  BL_Anterior(),  COOLDOWN()] },
-      { name: "Martes",    blocks: [WALK()] },
-      { name: "Miércoles", blocks: [WALK(), WU_HIIT(),      BL_HIIT()] }, // sin enfriamiento
-      { name: "Jueves",    blocks: [WALK()] },
-      { name: "Viernes",   blocks: [WALK(), WU_Posterior(), BL_Posterior(), COOLDOWN()] },
+      { name: "Lunes",     blocks: [CARDIO(), WU_Anterior(),  BL_Anterior(),  COOLDOWN()] },
+      { name: "Martes",    blocks: [CARDIO()] },
+      { name: "Miércoles", blocks: [CARDIO(), WU_HIIT(),      BL_HIIT()] }, // sin enfriamiento
+      { name: "Jueves",    blocks: [CARDIO()] },
+      { name: "Viernes",   blocks: [CARDIO(), WU_Posterior(), BL_Posterior(), COOLDOWN()] },
       { name: "Sábado",    blocks: [LIBRE()] },
       { name: "Domingo",   blocks: [LIBRE()] }
     ],
@@ -215,9 +193,13 @@ function ensureWeekShape(weekStart) {
 //  INICIALIZACIÓN DE LA APP
 // ================================
 function init() {
-  // Tabs: click -> showTab
-  document.querySelectorAll(".tab").forEach(t => {
-    t.onclick = () => showTab(t.dataset.tab);
+  // Delegación de eventos para tabs
+  document.addEventListener("click", (e) => {
+    const t = e.target.closest(".tab");
+    if (!t) return;
+    e.preventDefault();
+    const name = t.dataset.tab || "plan";
+    showTab(name);
   });
 
   // Navegación semanas
@@ -250,7 +232,9 @@ function init() {
   createWeekIfMissing(wk, true);
 
   // Arranca pintando SOLO el Plan
-  setTimeout(() => showTab("plan"), 100);
+  const activeBtn = document.querySelector(".tab.active");
+  const initial = activeBtn ? activeBtn.dataset.tab : "plan";
+  showTab(initial);
 }
 
 function shiftWeek(days) {
@@ -321,7 +305,7 @@ function renderDayBlocks(container, day, idx) {
     const wrap = document.createElement("div");
     wrap.className = "block";
 
-    // colorear según estado (inline por si CSS no aplica)
+    // Colorear según estado
     if (block.status === "done") wrap.style.background = "#d6f8d6";
     else if (block.status === "notdone") wrap.style.background = "#f9d6d6";
     else wrap.style.background = "";
@@ -330,18 +314,33 @@ function renderDayBlocks(container, day, idx) {
     const notDoneBtn = showNotDone ? `<button class="btn small" data-idx="${idx}" data-bidx="${bIdx}" data-act="notdone">No completado</button>` : "";
     const completed = `<label><input type="checkbox" ${block.status === "done" ? "checked" : ""} data-idx="${idx}" data-bidx="${bIdx}" class="doneToggle"> Completado</label>`;
 
-    // Caminata
-    if (block.walk) {
-      const wd = block.walkData || { tiempo: "", distancia: "", fc: "", sensaciones: "" };
+    // --- Cardio (compat: antes "Caminata diaria") ---
+    if (block.cardio || block.walk) {
+      if (!block.cardio) {
+        block.type = "Cardio";
+        block.cardio = true;
+        block.cardioData = Object.assign(
+          { modalidad: "Caminata", tiempo: "", distancia: "", fc: "", sensaciones: "" },
+          block.walkData || {}
+        );
+      }
+      const cd = block.cardioData || { modalidad: "Caminata", tiempo: "", distancia: "", fc: "", sensaciones: "" };
       wrap.innerHTML = `
-        <header><strong>🚶 ${block.type}</strong>
+        <header><strong>🏃 ${block.type}</strong>
           <div class="controls state-toggle">${completed}${notDoneBtn}</div>
         </header>
         <div class="walk">
-          <label>Tiempo (min)<input type="number" step="1" class="walkInput" data-idx="${idx}" data-bidx="${bIdx}" data-field="tiempo" value="${wd.tiempo}"></label>
-          <label>Distancia (km)<input type="number" step="0.01" class="walkInput" data-idx="${idx}" data-bidx="${bIdx}" data-field="distancia" value="${wd.distancia}"></label>
-          <label>FC media (ppm)<input type="number" step="1" class="walkInput" data-idx="${idx}" data-bidx="${bIdx}" data-field="fc" value="${wd.fc}"></label>
-          <label style="grid-column:1/-1;">Sensaciones<textarea rows="3" class="walkText" data-idx="${idx}" data-bidx="${bIdx}" data-field="sensaciones">${wd.sensaciones}</textarea></label>
+          <label>Modalidad
+            <select class="cardioSelect" data-idx="${idx}" data-bidx="${bIdx}" data-field="modalidad">
+              <option ${cd.modalidad==="Caminata"?"selected":""}>Caminata</option>
+              <option ${cd.modalidad==="Carrera"?"selected":""}>Carrera</option>
+              <option ${cd.modalidad==="Bicicleta"?"selected":""}>Bicicleta</option>
+            </select>
+          </label>
+          <label>Tiempo (min)<input type="number" step="1" class="cardioInput" data-idx="${idx}" data-bidx="${bIdx}" data-field="tiempo" value="${cd.tiempo}"></label>
+          <label>Distancia (km)<input type="number" step="0.01" class="cardioInput" data-idx="${idx}" data-bidx="${bIdx}" data-field="distancia" value="${cd.distancia}"></label>
+          <label>FC media (ppm)<input type="number" step="1" class="cardioInput" data-idx="${idx}" data-bidx="${bIdx}" data-field="fc" value="${cd.fc}"></label>
+          <label style="grid-column:1/-1;">Sensaciones<textarea rows="3" class="cardioText" data-idx="${idx}" data-bidx="${bIdx}" data-field="sensaciones">${cd.sensaciones}</textarea></label>
         </div>
       `;
     }
@@ -418,7 +417,23 @@ function attachBlockHandlers() {
     };
   });
 
-  // Entradas caminata / libre
+  // Cardio inputs (nuevo)
+  document.querySelectorAll(".cardioSelect,.cardioInput,.cardioText").forEach(inp => {
+    inp.addEventListener("input", e => {
+      const i = e.target, wk = getActiveWeek(), st = loadStateFor(wk);
+      const b = st.days[i.dataset.idx].blocks[i.dataset.bidx];
+      if (!b.cardio) {
+        b.type = "Cardio";
+        b.cardio = true;
+        b.cardioData = Object.assign({ modalidad: "Caminata", tiempo: "", distancia: "", fc: "", sensaciones: "" }, b.walkData || {});
+      }
+      const field = i.dataset.field;
+      if (b.cardioData) b.cardioData[field] = i.value;
+      saveStateFor(wk, st);
+    });
+  });
+
+  // (Compat) Entradas antiguas de caminata/libre
   document.querySelectorAll(".walkInput,.walkText,.freeInput,.freeText").forEach(inp => {
     inp.addEventListener("input", e => {
       const i = e.target, wk = getActiveWeek(), st = loadStateFor(wk);
@@ -438,7 +453,6 @@ function attachBlockHandlers() {
       const wk = getActiveWeek(), st = loadStateFor(wk);
       const ex = st.days[i].blocks[j].exercises[eidx];
       const text = c.textContent.trim();
-      // formato libre, pero intentamos parsear "kg x reps"
       const m = text.match(/^\s*(\d+(?:[.,]\d+)?)\s*x\s*(\d+)\s*$/i);
       ex.sets[sidx] = m ? { w: String(m[1]).replace(',', '.'), r: m[2] } : { w: "", r: "" };
       saveStateFor(wk, st);
@@ -485,64 +499,185 @@ function renderHistory() {
     card.querySelector("button").onclick = () => {
       setActiveWeek(w);
       if (weekInput) weekInput.value = w;
-      showTab("plan"); // cambiar a Plan y renderizar ahí
+      showTab("plan");
     };
   });
+}
+
+// ----- Helpers de datos para gráficos -----
+function collectUniqueExerciseNames() {
+  const all = loadAll();
+  const set = new Set();
+  Object.keys(all).forEach(w => {
+    (all[w].days || []).forEach(d => {
+      (d.blocks || []).forEach(b => {
+        if (b.exercises) {
+          (b.exercises || []).forEach(ex => {
+            if (ex?.name) set.add(ex.name.trim());
+          });
+        }
+      });
+    });
+  });
+  return Array.from(set).sort((a,b)=>a.localeCompare(b,'es'));
+}
+function weeklyVolumeFor(exerciseName /*null = total*/) {
+  const all = loadAll();
+  const weeks = listWeeks();
+  return weeks.map(w => {
+    const st = all[w]; if (!st) return { x: w, y: 0 };
+    let vol = 0;
+    st.days.forEach(dy => {
+      dy.blocks.forEach(b => {
+        if (!b.exercises) return;
+        b.exercises.forEach(ex => {
+          if (exerciseName && ex.name?.trim() !== exerciseName) return;
+          (ex.sets || []).forEach(s => {
+            if (s.w && s.r) vol += (+s.w || 0) * (+s.r || 0);
+          });
+        });
+      });
+    });
+    return { x: w, y: vol };
+  });
+}
+function weeklyCardioTotals(mod /* "Total" | "Caminata" | "Carrera" | "Bicicleta" */) {
+  const all = loadAll();
+  const weeks = listWeeks();
+  return weeks.map(w => {
+    const st = all[w]; if (!st) return { x: w, t: 0, d: 0 };
+    let t = 0, d = 0;
+    st.days.forEach(dy => {
+      dy.blocks.forEach(b => {
+        const has = (b.cardio && b.cardioData) || (b.walk && b.walkData);
+        if (!has) return;
+        const data = b.cardioData || b.walkData;
+        if (mod && mod !== "Total") {
+          const m = (b.cardioData?.modalidad) || "Caminata"; // por compat
+          if (m !== mod) return;
+        }
+        t += +data.tiempo || 0;
+        d += +data.distancia || 0;
+      });
+    });
+    return { x: w, t, d };
+  });
+}
+
+// Crea UI de filtros en la pestaña de gráficos si no existe
+function ensureChartsControls() {
+  const pane = document.getElementById("tab-graficos");
+  if (!pane) return;
+  // Si ya existen, no los dupliques
+  if (!document.getElementById("chartsControls")) {
+    const wrap = document.createElement("div");
+    wrap.id = "chartsControls";
+    wrap.className = "card";
+    wrap.style.marginBottom = "12px";
+    wrap.innerHTML = `
+      <div class="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <label>Volumen (kg·reps): ejercicio
+          <select id="volExerciseSelect">
+            <option value="">(Total)</option>
+          </select>
+        </label>
+        <label>Cardio: modalidad
+          <select id="cardioModSelect">
+            <option value="Total">(Total)</option>
+            <option value="Caminata">Caminata</option>
+            <option value="Carrera">Carrera</option>
+            <option value="Bicicleta">Bicicleta</option>
+          </select>
+        </label>
+      </div>
+    `;
+    // Inserta el control al inicio de la pestaña, antes de los canvas
+    const chartsWrap = pane.querySelector(".charts");
+    if (chartsWrap) pane.insertBefore(wrap, chartsWrap);
+    else pane.prepend(wrap);
+  }
+
+  // Rellena el select de ejercicios con nombres únicos
+  const sel = document.getElementById("volExerciseSelect");
+  if (sel && sel.dataset.filled !== "1") {
+    const names = collectUniqueExerciseNames();
+    names.forEach(n => {
+      const opt = document.createElement("option");
+      opt.value = n;
+      opt.textContent = n;
+      sel.appendChild(opt);
+    });
+    sel.dataset.filled = "1";
+  }
+
+  // Eventos: al cambiar filtros, redibujar
+  document.getElementById("volExerciseSelect")?.addEventListener("change", drawCharts);
+  document.getElementById("cardioModSelect")?.addEventListener("change", drawCharts);
 }
 
 function drawCharts() {
   if (typeof Chart === "undefined") return;
 
+  ensureChartsControls();
+
   const ctxPeso = document.getElementById("pesoChart")?.getContext("2d");
-  const ctxVol = document.getElementById("volChart")?.getContext("2d");
-  const ctxWalkT = document.getElementById("walkTimeChart")?.getContext("2d");
-  const ctxWalkD = document.getElementById("walkDistChart")?.getContext("2d");
+  const ctxVol  = document.getElementById("volChart")?.getContext("2d");
+  const ctxWalkT= document.getElementById("walkTimeChart")?.getContext("2d");
+  const ctxWalkD= document.getElementById("walkDistChart")?.getContext("2d");
   if (!ctxPeso || !ctxVol || !ctxWalkT || !ctxWalkD) return;
 
   const weeks = listWeeks();
   const all = loadAll();
-  const pesos = [];
-  const volumen = [];
-  const walkTime = [];
-  const walkDist = [];
 
+  // Peso
+  const pesos = [];
   weeks.forEach(w => {
     const st = all[w];
     if (!st) return;
     const bio = st.biometrics || {};
     if (bio.peso) pesos.push({ x: w, y: +bio.peso });
-    let vol = 0, t = 0, d = 0;
-    st.days.forEach(dy => {
-      dy.blocks.forEach(b => {
-        if (b.walk && b.walkData) {
-          t += +b.walkData.tiempo || 0;
-          d += +b.walkData.distancia || 0;
-        }
-        if (b.exercises) {
-          b.exercises.forEach(ex => {
-            (ex.sets || []).forEach(s => {
-              if (s.w && s.r) vol += (+s.w || 0) * (+s.r || 0);
-            });
-          });
-        }
-      });
-    });
-    volumen.push({ x: w, y: vol });
-    walkTime.push({ x: w, y: t });
-    walkDist.push({ x: w, y: d });
   });
+
+  // Volumen: ejercicio filtrado
+  const chosenEx = document.getElementById("volExerciseSelect")?.value || "";
+  const volumeData = weeklyVolumeFor(chosenEx || null); // null => total
+
+  // Cardio: modalidad filtrada
+  const chosenMod = document.getElementById("cardioModSelect")?.value || "Total";
+  const cardioData = weeklyCardioTotals(chosenMod); // {x, t, d}
+
+  const cardioTime = cardioData.map(o => ({ x: o.x, y: o.t }));
+  const cardioDist = cardioData.map(o => ({ x: o.x, y: o.d }));
 
   const opts = { responsive: true, scales: { x: { ticks: { color: "#333" } }, y: { beginAtZero: true } } };
 
+  // Destruye si ya existen
   window._pesoChart && window._pesoChart.destroy();
   window._volChart && window._volChart.destroy();
   window._walkTChart && window._walkTChart.destroy();
   window._walkDChart && window._walkDChart.destroy();
 
-  window._pesoChart = new Chart(ctxPeso, { type: "line", data: { datasets: [{ label: "Peso (kg)", data: pesos }] }, options: opts });
-  window._volChart = new Chart(ctxVol, { type: "bar", data: { datasets: [{ label: "Volumen (kg·reps)", data: volumen }] }, options: opts });
-  window._walkTChart = new Chart(ctxWalkT, { type: "bar", data: { datasets: [{ label: "Tiempo caminata (min)", data: walkTime }] }, options: opts });
-  window._walkDChart = new Chart(ctxWalkD, { type: "bar", data: { datasets: [{ label: "Distancia caminata (km)", data: walkDist }] }, options: opts });
+  // Dibuja
+  window._pesoChart = new Chart(ctxPeso, {
+    type: "line",
+    data: { datasets: [{ label: "Peso (kg)", data: pesos }] },
+    options: opts
+  });
+  window._volChart = new Chart(ctxVol, {
+    type: "bar",
+    data: { datasets: [{ label: chosenEx ? `Volumen (${chosenEx})` : "Volumen (total)", data: volumeData }] },
+    options: opts
+  });
+  window._walkTChart = new Chart(ctxWalkT, {
+    type: "bar",
+    data: { datasets: [{ label: chosenMod === "Total" ? "Tiempo cardio (min) — Total" : `Tiempo cardio (min) — ${chosenMod}`, data: cardioTime }] },
+    options: opts
+  });
+  window._walkDChart = new Chart(ctxWalkD, {
+    type: "bar",
+    data: { datasets: [{ label: chosenMod === "Total" ? "Distancia cardio (km) — Total" : `Distancia cardio (km) — ${chosenMod}`, data: cardioDist }] },
+    options: opts
+  });
 }
 
 function openDailySummary(idx) {
@@ -553,9 +688,10 @@ function openDailySummary(idx) {
 
   day.blocks.forEach(b => {
     txt += `🟦 ${b.type}\n`;
-    if (b.walk) {
-      const d = b.walkData || {};
-      txt += `  • Tiempo: ${d.tiempo || "-"} min\n  • Distancia: ${d.distancia || "-"} km\n  • FC media: ${d.fc || "-"} ppm\n  • Sensaciones: ${d.sensaciones || "-"}\n`;
+    if (b.cardio || b.walk) {
+      const d = (b.cardioData || b.walkData) || {};
+      const mod = (b.cardioData?.modalidad) ? ` (${b.cardioData.modalidad})` : "";
+      txt += `  • Tipo: Cardio${mod}\n  • Tiempo: ${d.tiempo || "-"} min\n  • Distancia: ${d.distancia || "-"} km\n  • FC media: ${d.fc || "-"} ppm\n  • Sensaciones: ${d.sensaciones || "-"}\n`;
     } else if (b.kind === "libre") {
       const c = b.custom || {};
       txt += `  • Tipo: ${c.tipo || "-"}\n  • Distancia: ${c.distancia || "-"}\n  • Tiempo: ${c.tiempo || "-"}\n  • FC media: ${c.fc || "-"}\n  • Sensaciones: ${c.sensaciones || "-"}\n`;
@@ -611,7 +747,16 @@ function importAll(e) {
       const tab = activeTabName();
       if (tab === "plan") render();
       else if (tab === "historial") renderHistory();
-      else if (tab === "graficos") drawCharts();
+      else if (tab === "graficos") {
+        // forzar refresco de selects con nuevos ejercicios y luego dibujar
+        const sel = document.getElementById("volExerciseSelect");
+        if (sel) {
+          sel.dataset.filled = ""; // vuelve a llenar
+          const wrap = document.getElementById("chartsControls");
+          if (wrap) wrap.remove(); // recrear controles
+        }
+        drawCharts();
+      }
       alert("Datos importados ✅");
     } catch { alert("Error al importar"); }
   };
@@ -653,7 +798,8 @@ function duplicateWeek() {
   st.weekStart = next;
   st.days.forEach(day => day.blocks.forEach(b => {
     b.status = "none";
-    if (b.walkData) b.walkData = { tiempo: "", distancia: "", fc: "", sensaciones: "" };
+    if (b.cardioData) b.cardioData = { modalidad: "Caminata", tiempo: "", distancia: "", fc: "", sensaciones: "" };
+    if (b.walkData)  b.walkData  = { tiempo: "", distancia: "", fc: "", sensaciones: "" };
     if (b.custom) b.custom = { tipo:"", distancia:"", tiempo:"", fc:"", sensaciones:"" };
     if (b.exercises) b.exercises.forEach(ex => ex.sets.forEach(s => (s.w="", s.r="")));
     b.notes = "";
@@ -673,9 +819,10 @@ function exportWeekReport() {
     txt += `== ${day.name} ==\n`;
     day.blocks.forEach(b => {
       txt += `• ${b.type}\n`;
-      if (b.walk && b.walkData) {
-        const d = b.walkData;
-        txt += `   - Tiempo: ${d.tiempo||"-"} min | Dist: ${d.distancia||"-"} km | FC: ${d.fc||"-"} | Sens.: ${d.sensaciones||"-"}\n`;
+      if ((b.cardio && b.cardioData) || (b.walk && b.walkData)) {
+        const d = b.cardioData || b.walkData;
+        const mod = b.cardioData?.modalidad ? ` (${b.cardioData.modalidad})` : "";
+        txt += `   - Cardio${mod}: Tiempo ${d.tiempo||"-"} min | Dist ${d.distancia||"-"} km | FC ${d.fc||"-"} | Sens ${d.sensaciones||"-"}\n`;
       } else if (b.kind === "libre" && b.custom) {
         const c = b.custom;
         txt += `   - Tipo: ${c.tipo||"-"} | Dist: ${c.distancia||"-"} | Tiempo: ${c.tiempo||"-"} | FC: ${c.fc||"-"} | Sens.: ${c.sensaciones||"-"}\n`;
