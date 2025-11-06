@@ -7,7 +7,9 @@
   --bad: #ffe8e8;
   --bad-border: #ffb3b3;
 }
-
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+.tab.active{outline:0}
 * {
   box-sizing: border-box;
 }
