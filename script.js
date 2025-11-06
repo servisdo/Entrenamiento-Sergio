@@ -12,6 +12,7 @@ function activeTabName() {
   const t = document.querySelector(".tab.active");
   return t ? t.dataset.tab : "plan";
 }
+// ======= FIX TABS (v27) =======
 function showTab(tabName) {
   // Botones
   document.querySelectorAll(".tab").forEach(x => {
@@ -23,11 +24,32 @@ function showTab(tabName) {
   document.querySelectorAll(".tab-pane").forEach(p => {
     p.classList.toggle("active", p.id === "tab-" + tabName);
   });
-  // Render perezoso
-  if (tabName === "plan") render();
-  else if (tabName === "historial") renderHistory();
-  else if (tabName === "graficos") drawCharts();
+  // Render perezoso por pestaña
+  if (tabName === "plan") {
+    render();
+  } else if (tabName === "historial") {
+    renderHistory();
+  } else if (tabName === "graficos") {
+    drawCharts();
+  }
 }
+
+// Delegación de eventos robusta (evita problemas de overlay)
+document.addEventListener("click", (e) => {
+  const t = e.target.closest(".tab");
+  if (!t) return;
+  e.preventDefault();
+  const name = t.dataset.tab || "plan";
+  showTab(name);
+});
+
+// Arranque seguro: si no hay tab activo, usa "plan"
+document.addEventListener("DOMContentLoaded", () => {
+  const activeBtn = document.querySelector(".tab.active");
+  const initial = activeBtn ? activeBtn.dataset.tab : "plan";
+  showTab(initial);
+});
+
 
 // ---- Almacenamiento (localStorage) ----
 function loadAll() {
